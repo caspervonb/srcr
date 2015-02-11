@@ -1,0 +1,20 @@
+{
+  "name": "srcr",
+  "version": "0.0.0",
+  "description": "",
+  "bin": {
+    "srcr": "cmd.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "cmd.js"
+  ],
+  "author": "Casper Beyer <caspervonb@qup.io>",
+  "license": "MIT",
+  "dependencies": {
+    "chrome-remote-interface": "^0.6.0",
+    "through2": "^0.6.3"
+  }
+}
