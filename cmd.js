@@ -29,11 +29,17 @@ var client = chrome(function(client) {
 
         if (script) {
           http.get(script.url, function(res) {
+            var source = '';
+
             res.setEncoding('utf-8');
-            res.on('data', function (data) {
+            res.on('data', function (chunk) {
+              source += chunk;
+            });
+
+            res.on('end', function() {
               var params = {
                 scriptId: script.scriptId,
-                scriptSource: data.toString(),
+                scriptSource: source,
               };
 
               client.Debugger.setScriptSource(params, function(error, response) {
