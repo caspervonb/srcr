@@ -1,6 +1,6 @@
 # Srcr (1)
 ## Synopsis
-srcr [OPTION] ... [FILE]...
+srcr [OPTION] ...
 
 ## Description
 Performs client side source re-compilation when source files change.
