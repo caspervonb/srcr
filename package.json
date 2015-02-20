@@ -2,6 +2,7 @@
   "name": "srcr",
   "version": "0.0.2",
   "description": "",
+  "main": "index.js",
   "bin": {
     "srcr": "cmd.js"
   },
@@ -9,12 +10,13 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "files": [
+    "index.js",
     "cmd.js"
   ],
   "author": "Casper Beyer <caspervonb@qup.io>",
   "license": "MIT",
   "dependencies": {
-    "chrome-remote-interface": "^0.6.0",
-    "through2": "^0.6.3"
+    "commander": "^2.6.0",
+    "ws": "^0.7.1"
   }
 }

@@ -1,87 +1,64 @@
 #!/usr/bin/env node
 
-var through = require('through2');
-var chrome = require('chrome-remote-interface');
-var path = require('path');
-var http = require('http');
+var cmd = require('commander');
+var srcr = require('./');
 
-var scripts = {};
+cmd.usage('[OPTION]...');
+cmd.option('-h, --host <HOST>', '', 'localhost');
+cmd.option('-p, --port <PORT>', '', '9222');
 
-var client = chrome(function(client) {
-  client.on('error', function() {
-  });
+cmd.parse(process.argv);
+
+var client = srcr.connect(cmd, function(error, targets) {
+  if (error) {
+    return console.error(error);
+  }
 
   console.log(JSON.stringify({
-    time:new Date(),
+    time: new Date(),
     level: 'info',
     message: 'client connected on port 9222',
   }));
 
-  process.stdin
-    .pipe(through(parse))
-    .pipe(process.stdout);
+  var target = targets.filter(function(target) {
+    return target.url.indexOf(cmd.host) > -1;
+  })[0];
 
-    function parse(buf, enc, next) {
-    try {
-      var data = JSON.parse(buf);
-      if (data.type == 'change') {
-        var script = scripts[data.url];
-
-        if (script) {
-          http.get(script.url, function(res) {
-            var source = '';
-
-            res.setEncoding('utf-8');
-            res.on('data', function (chunk) {
-              source += chunk;
-            });
-
-            res.on('end', function() {
-              var params = {
-                scriptId: script.scriptId,
-                scriptSource: source,
-              };
-
-              client.Debugger.setScriptSource(params, function(error, response) {
-                if (error) {
-                  return console.log(JSON.stringify({
-                    time:new Date(),
-                    level: 'error',
-                    message: response.message,
-                  }));
-                }
-
-                console.log(JSON.stringify({
-                  time:new Date(),
-                  level: 'info',
-                  event: 'source',
-                  url: data.url,
-                }));
-              });
-            });
-          });
-        }
-      }
-    } catch (err) {
-      // no-op
+  client.attach(target, function(error, target) {
+    if (error) {
+      return console.error(error);
     }
 
-    this.push(buf);
-    next();
-  }
-
-  client.on('Debugger.scriptParsed', function(params) {
-    if (params.url.indexOf('http://') > -1) {
-
-      scripts[path.basename(params.url)] = params;
-      console.log(JSON.stringify({
-        time:new Date(),
-        level: 'info',
-        event: 'parse',
-        url: params.url
-      }));
-    }
+    console.log(JSON.stringify({
+      time: new Date(),
+      level: 'info',
+      message: 'attached to target ' + target.title,
+    }));
   });
+});
 
-  client.Debugger.enable();
+process.stdin.on('data', function(data) {
+  process.stdout.write(data);
+
+  try {
+    var message = JSON.parse(data);
+    if (message.type == 'change') {
+      client.source(message.url, false, function(error) {
+        if (error) {
+          return console.log(JSON.stringify({
+            time: new Date(),
+            level: 'error',
+            message: error,
+          }));
+        }
+
+        console.log(JSON.stringify({
+          time: new Date(),
+          level: 'info',
+          event: 'source',
+          url: data.url,
+        }));
+      });
+    }
+  } catch (error) {}
 });
