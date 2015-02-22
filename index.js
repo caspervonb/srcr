@@ -33,6 +33,10 @@ var DebuggerClient = (function() {
         callback(null, targets);
       });
     });
+
+    request.on('error', function(error) {
+      return callback(error);
+    });
   };
 
   DebuggerClient.prototype.attach = function attach(target, callback) {
