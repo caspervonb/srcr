@@ -9,11 +9,8 @@ cmd.option('-p, --port <PORT>', '', '9222');
 
 cmd.parse(process.argv);
 
-var client = srcr.connect(cmd, function(error, targets) {
-  if (error) {
-    return console.error(error);
-  }
-
+var client = srcr.connect(cmd);
+client.on('connect', function(targets) {
   console.log(JSON.stringify({
     time: new Date(),
     level: 'info',
@@ -24,17 +21,15 @@ var client = srcr.connect(cmd, function(error, targets) {
     return target.url.indexOf(cmd.host) > -1;
   })[0];
 
-  client.attach(target, function(error, target) {
-    if (error) {
-      return console.error(error);
-    }
+  client.attach(targets[0]);
+});
 
-    console.log(JSON.stringify({
-      time: new Date(),
-      level: 'info',
-      message: 'attached to target ' + target.title,
-    }));
-  });
+client.on('attach', function(target) {
+  console.log(JSON.stringify({
+    time: new Date(),
+    level: 'info',
+    message: 'attached to target ' + target.title,
+  }));
 });
 
 process.stdin.on('data', function(data) {

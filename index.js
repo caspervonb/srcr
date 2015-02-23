@@ -1,17 +1,24 @@
 var http = require('http');
 var ws = require('ws');
 var path = require('path');
+var events = require('events');
+var util = require('util');
 
 var DebuggerClient = (function() {
   function DebuggerClient() {
-    this.request = null;
+    events.EventEmitter.call(this);
   }
+
+  util.inherits(DebuggerClient, events.EventEmitter);
 
   DebuggerClient.prototype.connect = function(port, host, callback) {
     this.port = port;
     this.host = host;
 
-    this.targets(callback);
+    var client = this;
+    this.targets(function(targets) {
+      client.emit('connect', targets);
+    });
   };
 
   DebuggerClient.prototype.targets = function targets(callback) {
@@ -21,6 +28,7 @@ var DebuggerClient = (function() {
       path: '/json'
     };
 
+    var client = this;
     var request = http.get(options, function(response) {
       var data = '';
 
@@ -30,18 +38,19 @@ var DebuggerClient = (function() {
 
       response.on('end', function() {
         var targets = JSON.parse(data);
-        callback(null, targets);
+        callback(targets);
       });
     });
 
     request.on('error', function(error) {
-      return callback(error);
+      client.emit('error', error);
     });
   };
 
   DebuggerClient.prototype.attach = function attach(target, callback) {
     var scripts = [];
     var socket = ws.connect(target.webSocketDebuggerUrl);
+    var client = this;
 
     socket.once('open', function() {
       var id = Date.now();
@@ -52,10 +61,11 @@ var DebuggerClient = (function() {
           socket.removeListener('message', process);
 
           if (message.error) {
-            return callback(message.error);
+            client.emit('error', message.error);
+            return;
           }
 
-          callback(null, target);
+          client.emit('attach', target);
         }
       });
 
@@ -70,8 +80,12 @@ var DebuggerClient = (function() {
       if (message.method == 'Debugger.scriptParsed') {
         scripts.push(message.params);
       }
+
+      if (message.method == 'Inspector.detached') {
+        client.emit('detatch');
+      }
     });
-    
+
     this.socket = socket;
     this.scripts = scripts;
   };
@@ -79,7 +93,7 @@ var DebuggerClient = (function() {
   DebuggerClient.prototype.source = function source(filename, contents, callback) {
     var socket = this.socket;
     var scripts = this.scripts;
-    
+
     var script = scripts.filter(function(src) {
       return path.basename(src.url) == filename;
     })[0];
@@ -97,7 +111,7 @@ var DebuggerClient = (function() {
         if (message.error) {
           return callback(message.error);
         }
-        
+
         callback(null, null);
       }
     });
@@ -114,7 +128,7 @@ var DebuggerClient = (function() {
     } else {
       var request = http.get(script.url, function(response) {
         var contents = '';
-        
+
         response.on('data', function(chunk) {
           contents += chunk;
         });
@@ -135,6 +149,7 @@ var DebuggerClient = (function() {
 
   return DebuggerClient;
 }());
+
 
 function connect(options, callback) {
   var client = new DebuggerClient();
