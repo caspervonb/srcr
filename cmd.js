@@ -32,6 +32,22 @@ client.on('attach', function(target) {
   }));
 });
 
+client.on('detatch', function(target) {
+  var id = setInterval(function() {
+    client.targets(function(targets) {
+      var target = targets.filter(function(target) {
+        return target.url.indexOf(cmd.host) > -1;
+      })[0];
+
+      client.attach(target);
+    });
+  }, 500);
+
+  client.once('attach', function() {
+    clearInterval(id);
+  });
+});
+
 process.stdin.on('data', function(data) {
   process.stdout.write(data);
 
